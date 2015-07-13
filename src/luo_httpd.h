@@ -20,25 +20,27 @@
 
 /* 常量/宏声明 */
 // 服务描述
-#define SERVER_DESC 	"Server: luo_httpd/0.0.1\r\n"
+#define SERVER_DESC 				"Server: luo_httpd/0.0.1\r\n"
 
 // sock默认值
-#define SOCK_DEFAULT 	-1
+#define SOCK_DEFAULT 				-1
 
 // 状态码
-#define LUO_OK 		 	 0
-#define LUO_ERROR 		-1
+#define LUO_OK 		 	 			0
+#define LUO_ERROR 					-1
 
 // 判断字符x是否为空白符
-#define luo_isspace 	isspace((int) x)
+#define luo_isspace(x) 				isspace((int) (x))
 
 /* 结构体声明 */
-typedef struct sockaddr_in luo_sockaddr_in;
-typedef struct sockaddr luo_sockaddr;
+typedef struct sockaddr_in 			luo_sockaddr_in;
+typedef struct sockaddr 			luo_sockaddr;
+typedef struct stat 				luo_stat;
 
 /* 函数声明 */
 int luo_startup(u_short *port);
-void *accept_request(void *tclient);
+void *luo_accept_request(void *tclient);
+int luo_get_line(int sock, char *buf, int buf_size);
 // 输出错误信息
 void luo_error(const char *error);
 
