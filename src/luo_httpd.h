@@ -21,8 +21,12 @@
 /* 常量/宏声明 */
 // 服务描述
 #define SERVER_DESC 				"Server: luo_httpd/0.0.1\r\n"
+// 默认根目录
+#define DEFAULT_ROOT_PATH			"htdocs"
 // 默认首页
 #define DEFAULT_HOME_PAGE			"index.html"
+// 默认端口
+#define DEFAULT_PORT				0
 // sock默认值
 #define SOCK_DEFAULT 				-1
 // buf最大值
@@ -58,6 +62,10 @@ void luo_execute_cgi(int client, const char *path, const char *method,
 		const char *query_string);
 //
 int luo_get_line(int sock, char *buf, int buf_size);
+// 读取文件内容
+void luo_cat(int client, FILE *file);
+// 输出header
+void luo_headers(int client, const char *path);
 // 输出错误信息
 void luo_error(const char *error);
 // 不支持的请求方式

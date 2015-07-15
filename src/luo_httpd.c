@@ -116,7 +116,7 @@ luo_accept_request(void *tclient)
 		}
 	}
 
-	sprintf(path, "htdocs%s", url);
+	sprintf(path, "%s%s", DEFAULT_ROOT_PATH, url);
 
 	// path最后一位为/时 设置默认首页
 	if (path[strlen(path) - 1] == '/')
@@ -169,7 +169,29 @@ luo_accept_request(void *tclient)
 // 执行普通文件
 void luo_execute_file(int client, const char *path)
 {
+	FILE *file = NULL;
+	int char_number = 1;
+	char buf[BUF_MAX_SIZE];
 
+	buf[0] = 'A';
+	buf[1] = '\0';
+	while ((char_number > 0) && strcmp("\n", buf))
+	{
+		char_number = luo_get_line(client, buf, sizeof(buf));
+	}
+
+	file = fopen(path, "r");
+
+	if (file == NULL)
+	{
+		luo_not_found(client);
+	}
+	else
+	{
+		luo_headers(client, path);
+		luo_cat(client, file);
+	}
+	fclose(file);
 }
 
 // 执行CGI脚本
@@ -217,6 +239,35 @@ int luo_get_line(int sock, char *buf, int buf_size)
 	buf[i] = '\0';
 
 	return i;
+}
+
+// 读取文件内容
+void luo_cat(int client, FILE *file)
+{
+	char buf[BUF_MAX_SIZE];
+
+	fgets(buf, sizeof(buf), file);
+
+	while (!feof(file))
+	{
+		send(client, buf, strlen(buf), 0);
+		fgets(buf, sizeof(buf), file);
+	}
+}
+
+void luo_headers(int client, const char *path)
+{
+	char buf[BUF_MAX_SIZE];
+	(void) path;
+
+	strcpy(buf, "HTTP/1.0 200 OK\r\n");
+	send(client, buf, strlen(buf), 0);
+	strcpy(buf, SERVER_DESC);
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "Content-Type: text/html\r\n");
+	send(client, buf, strlen(buf), 0);
+	strcpy(buf, "\r\n");
+	send(client, buf, strlen(buf), 0);
 }
 
 // 输出错误信息
@@ -278,9 +329,10 @@ void luo_not_found(int client)
 int main(void)
 {
 	int server_sock = SOCK_DEFAULT;
-	u_short port = 0;
+	u_short port = DEFAULT_PORT;
 	int client_sock = SOCK_DEFAULT;
-	socklen_t client_name_len = sizeof(luo_sockaddr_in);
+	luo_sockaddr_in client_name;
+	socklen_t client_name_len = sizeof(client_name);
 	pthread_t new_thread;
 
 	server_sock = luo_startup(&port);
@@ -288,8 +340,8 @@ int main(void)
 
 	while (1)
 	{
-		client_sock = accept(server_sock, (luo_sockaddr *) &client_sock,
-				&client_name_len);
+		client_sock = (accept(server_sock, (luo_sockaddr *) &client_name,
+				&client_name_len));
 
 		if (client_sock == LUO_ERROR)
 		{
