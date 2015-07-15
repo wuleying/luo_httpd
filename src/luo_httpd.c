@@ -47,10 +47,10 @@ luo_accept_request(void *tclient)
 {
 	int client = *(int *) tclient;
 	int char_number;
-	char buf[1024];
-	char method[255];
-	char url[255];
-	char path[512];
+	char buf[BUF_MAX_SIZE];
+	char method[METHOD_MAX_SIZE];
+	char url[URL_MAX_SIZE];
+	char path[PATH_MAX_SIZE];
 	size_t i, j;
 	luo_stat st;
 	int cgi = 0;
@@ -72,7 +72,8 @@ luo_accept_request(void *tclient)
 	// 不为GET或POST方式请求(暂时只支持两种方式)
 	if (strcasecmp(method, "GET") && strcasecmp(method, "POST"))
 	{
-		//todo 错误信息
+		// 不支持的请求方式
+		luo_unimplemented(client);
 		return NULL;
 	}
 
@@ -117,9 +118,65 @@ luo_accept_request(void *tclient)
 
 	sprintf(path, "htdocs%s", url);
 
+	// path最后一位为/时 设置默认首页
+	if (path[strlen(path) - 1] == '/')
+	{
+		strcat(path, DEFAULT_HOME_PAGE);
+	}
+
+	if (stat(path, &st) == -1)
+	{
+		while ((char_number > 0) && strcmp("\n", buf))
+		{
+			char_number = luo_get_line(client, buf, sizeof(buf));
+		}
+
+		// 页面未发现
+		luo_not_found(client);
+	}
+	else
+	{
+		// 档案类型为目录时 设置默认首页
+		if ((st.st_mode & S_IFMT) == S_IFDIR)
+		{
+			strcat(path, DEFAULT_HOME_PAGE);
+		}
+
+		// 检查是否对文件拥有可执行权限 user | group | other
+		if ((st.st_mode & S_IXUSR) || (st.st_mode & S_IXGRP)
+				|| (st.st_mode & S_IXOTH))
+		{
+			cgi = 1;
+		}
+
+		if (cgi)
+		{
+			// 执行CGI脚本
+			luo_execute_cgi(client, path, method, query_string);
+		}
+		else
+		{
+			// 执行普通文件
+			luo_execute_file(client, path);
+		}
+	}
+
 	close(client);
 
 	return NULL;
+}
+
+// 执行普通文件
+void luo_execute_file(int client, const char *path)
+{
+
+}
+
+// 执行CGI脚本
+void luo_execute_cgi(int client, const char *path, const char *method,
+		const char *query_string)
+{
+
 }
 
 int luo_get_line(int sock, char *buf, int buf_size)
@@ -167,6 +224,54 @@ void luo_error(const char *error)
 {
 	perror(error);
 	exit(1);
+}
+
+// 不支持的请求方式
+void luo_unimplemented(int client)
+{
+	char buf[BUF_MAX_SIZE];
+
+	sprintf(buf, "HTTP/1.0 501 Method Not Implemented\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, SERVER_DESC);
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "Content-Type: text/html\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "<HTML><HEAD><TITLE>Method Not Implemented\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "</TITLE></HEAD>\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "<BODY><P>HTTP request method not supported.</P>\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "</BODY></HTML>\r\n");
+	send(client, buf, strlen(buf), 0);
+}
+
+// 页面未发现
+void luo_not_found(int client)
+{
+	char buf[BUF_MAX_SIZE];
+
+	sprintf(buf, "HTTP/1.0 404 NOT FOUND\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, SERVER_DESC);
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "Content-Type: text/html\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "<HTML><TITLE>Not Found</TITLE>\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "<BODY><P>The server could not fulfill\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "your request because the resource specified\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "is unavailable or nonexistent.</P>\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "</BODY></HTML>\r\n");
+	send(client, buf, strlen(buf), 0);
 }
 
 // 主函数

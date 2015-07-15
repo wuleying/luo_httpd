@@ -21,9 +21,18 @@
 /* 常量/宏声明 */
 // 服务描述
 #define SERVER_DESC 				"Server: luo_httpd/0.0.1\r\n"
-
+// 默认首页
+#define DEFAULT_HOME_PAGE			"index.html"
 // sock默认值
 #define SOCK_DEFAULT 				-1
+// buf最大值
+#define BUF_MAX_SIZE				1024
+// method最大值
+#define METHOD_MAX_SIZE				32
+// url最大值
+#define URL_MAX_SIZE				256
+// path最大值
+#define PATH_MAX_SIZE				512
 
 // 状态码
 #define LUO_OK 		 	 			0
@@ -33,16 +42,27 @@
 #define luo_isspace(x) 				isspace((int) (x))
 
 /* 结构体声明 */
-typedef struct sockaddr_in 			luo_sockaddr_in;
-typedef struct sockaddr 			luo_sockaddr;
-typedef struct stat 				luo_stat;
+typedef struct sockaddr_in luo_sockaddr_in;
+typedef struct sockaddr luo_sockaddr;
+typedef struct stat luo_stat;
 
 /* 函数声明 */
+//
 int luo_startup(u_short *port);
+//
 void *luo_accept_request(void *tclient);
+// 执行普通文件
+void luo_execute_file(int client, const char *path);
+// 执行CGI脚本
+void luo_execute_cgi(int client, const char *path, const char *method,
+		const char *query_string);
+//
 int luo_get_line(int sock, char *buf, int buf_size);
 // 输出错误信息
 void luo_error(const char *error);
-
+// 不支持的请求方式
+void luo_unimplemented(int client);
+// 页面未发现
+void luo_not_found(int client);
 
 #endif /* _LUO_HTTPD_H_INCLUDED_ */
