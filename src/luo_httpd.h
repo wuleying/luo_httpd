@@ -65,7 +65,7 @@ int luo_get_line(int sock, char *buf, int buf_size);
 // 读取文件内容
 void luo_cat(int client, FILE *file);
 // 输出header
-void luo_headers(int client, const char *path);
+void luo_headers(int client);
 // 输出错误信息
 void luo_error(const char *error);
 // 不支持的请求方式

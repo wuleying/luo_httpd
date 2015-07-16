@@ -152,7 +152,7 @@ luo_accept_request(void *tclient)
 		if (cgi)
 		{
 			// 执行CGI脚本
-			luo_execute_cgi(client, path, method, query_string);
+			//luo_execute_cgi(client, path, method, query_string);
 		}
 		else
 		{
@@ -188,18 +188,20 @@ void luo_execute_file(int client, const char *path)
 	}
 	else
 	{
-		luo_headers(client, path);
+		luo_headers(client);
 		luo_cat(client, file);
 	}
 	fclose(file);
 }
 
 // 执行CGI脚本
-void luo_execute_cgi(int client, const char *path, const char *method,
-		const char *query_string)
-{
+/*
+ void luo_execute_cgi(int client, const char *path, const char *method,
+ const char *query_string)
+ {
 
-}
+ }
+ */
 
 int luo_get_line(int sock, char *buf, int buf_size)
 {
@@ -237,7 +239,6 @@ int luo_get_line(int sock, char *buf, int buf_size)
 	}
 
 	buf[i] = '\0';
-
 	return i;
 }
 
@@ -246,19 +247,16 @@ void luo_cat(int client, FILE *file)
 {
 	char buf[BUF_MAX_SIZE];
 
-	fgets(buf, sizeof(buf), file);
-
 	while (!feof(file))
 	{
-		send(client, buf, strlen(buf), 0);
 		fgets(buf, sizeof(buf), file);
+		send(client, buf, strlen(buf), 0);
 	}
 }
 
-void luo_headers(int client, const char *path)
+void luo_headers(int client)
 {
 	char buf[BUF_MAX_SIZE];
-	(void) path;
 
 	strcpy(buf, "HTTP/1.0 200 OK\r\n");
 	send(client, buf, strlen(buf), 0);
@@ -315,11 +313,7 @@ void luo_not_found(int client)
 	send(client, buf, strlen(buf), 0);
 	sprintf(buf, "<HTML><TITLE>Not Found</TITLE>\r\n");
 	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "<BODY><P>The server could not fulfill\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "your request because the resource specified\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "is unavailable or nonexistent.</P>\r\n");
+	sprintf(buf, "<BODY><P>404 Not Found</P>\r\n");
 	send(client, buf, strlen(buf), 0);
 	sprintf(buf, "</BODY></HTML>\r\n");
 	send(client, buf, strlen(buf), 0);
