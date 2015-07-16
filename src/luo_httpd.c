@@ -3,40 +3,43 @@
 int luo_startup(u_short *port)
 {
 	int httpd = 0;
-	luo_sockaddr_in name;
+	luo_sockaddr_in addr;
 
 	httpd = socket(PF_INET, SOCK_STREAM, 0);
+
 	if (httpd == LUO_ERROR)
 	{
-		luo_error("Socket error");
+		luo_error("socket() error. in luo_httpd.c luo_startup()");
 	}
 
-	memset(&name, 0, sizeof(luo_sockaddr_in));
+	memset(&addr, 0, sizeof(luo_sockaddr_in));
 
-	name.sin_family = AF_INET;
-	name.sin_port = htons(*port);
-	name.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(*port);
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-	if (bind(httpd, (luo_sockaddr *) &name, sizeof(name)) < 0)
+	// 绑定socket
+	if (bind(httpd, (luo_sockaddr *) &addr, sizeof(addr)) < 0)
 	{
-		luo_error("Bind error");
+		luo_error("bind() error. in luo_httpd.c luo_startup()");
 	}
 
 	if (*port == 0)
 	{
-		socklen_t name_len = sizeof(name);
+		socklen_t addr_len = sizeof(addr);
 
-		if (getsockname(httpd, (luo_sockaddr *) &name, &name_len) == LUO_ERROR)
+		if (getsockname(httpd, (luo_sockaddr *) &addr, &addr_len) == LUO_ERROR)
 		{
-			luo_error("Get socket name error");
+			luo_error("getsockname() error. in luo_httpd.c luo_startup()");
 		}
 
-		*port = ntohs(name.sin_port);
+		*port = ntohs(addr.sin_port);
 	}
 
+	// 监听socket
 	if (listen(httpd, 5) < 0)
 	{
-		luo_error("Listen error");
+		luo_error("listen() error. in luo_httpd.c luo_startup()");
 	}
 
 	return httpd;
@@ -339,13 +342,13 @@ int main(void)
 
 		if (client_sock == LUO_ERROR)
 		{
-			luo_error("Accept error");
+			luo_error("accept() error. in luo_httpd.c main()");
 		}
 
 		if (pthread_create(&new_thread, NULL, luo_accept_request,
 				(void *) &client_sock) != 0)
 		{
-			luo_error("Create error");
+			luo_error("pthread_create() error. in luo_httpd.c main()");
 		}
 	}
 

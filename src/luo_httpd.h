@@ -26,7 +26,7 @@
 // 默认首页
 #define DEFAULT_HOME_PAGE			"index.html"
 // 默认端口
-#define DEFAULT_PORT				0
+#define DEFAULT_PORT				10008
 // sock默认值
 #define SOCK_DEFAULT 				-1
 // buf最大值
