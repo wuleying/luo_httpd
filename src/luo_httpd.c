@@ -239,7 +239,8 @@ void luo_execute_cgi(int client, const char *path, const char *method,
 
 		if (content_len == -1)
 		{
-			// todo bad request
+			// 无效的请求
+			luo_bad_request(client);
 			return;
 		}
 	}
@@ -250,23 +251,27 @@ void luo_execute_cgi(int client, const char *path, const char *method,
 
 	if ((pipe(cgi_output) < 0) || (pipe(cgi_input) < 0))
 	{
-		// todo cannot execute
+		// CGI无法执行
+		luo_cannot_execute(client);
 		return;
 	}
 
 	if ((pid = fork()) < 0)
 	{
-		// todo cannot execute
+		// CGI无法执行
+		luo_cannot_execute(client);
 		return;
 	}
 
 	if (pid == 0)
 	{
 		// 子进程 执行CGI脚本
+		// 环境变量
 		char method_env[255];
 		char query_env[255];
 		char length_env[255];
 
+		// 复制文件句柄
 		dup2(cgi_output[1], 1);
 		dup2(cgi_input[0], 0);
 
@@ -435,6 +440,42 @@ void luo_not_found(int client)
 	sprintf(buf, "<HTML><TITLE>Not Found</TITLE>\r\n");
 	send(client, buf, strlen(buf), 0);
 	sprintf(buf, "<BODY><P>404 Not Found</P>\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "</BODY></HTML>\r\n");
+	send(client, buf, strlen(buf), 0);
+}
+
+// 无效的请求
+void luo_bad_request(int client)
+{
+	char buf[BUF_MAX_SIZE];
+
+	sprintf(buf, "HTTP/1.0 400 BAD REQUEST\r\n");
+	send(client, buf, sizeof(buf), 0);
+	sprintf(buf, "Content-type: text/html\r\n");
+	send(client, buf, sizeof(buf), 0);
+	sprintf(buf, "\r\n");
+	send(client, buf, sizeof(buf), 0);
+	sprintf(buf, "<P>Your browser sent a bad request, ");
+	send(client, buf, sizeof(buf), 0);
+	sprintf(buf, "such as a POST without a Content-Length.\r\n</P>");
+	send(client, buf, sizeof(buf), 0);
+	sprintf(buf, "</BODY></HTML>\r\n");
+	send(client, buf, strlen(buf), 0);
+}
+
+// CGI无法执行
+void luo_cannot_execute(int client)
+{
+	char buf[1024];
+
+	sprintf(buf, "HTTP/1.0 500 Internal Server Error\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "Content-type: text/html\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "\r\n");
+	send(client, buf, strlen(buf), 0);
+	sprintf(buf, "<P>Error prohibited CGI execution.\r\n");
 	send(client, buf, strlen(buf), 0);
 	sprintf(buf, "</BODY></HTML>\r\n");
 	send(client, buf, strlen(buf), 0);

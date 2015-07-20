@@ -74,5 +74,9 @@ void luo_error(const char *error);
 void luo_unimplemented(int client);
 // 页面未发现
 void luo_not_found(int client);
+// 无效的请求
+void luo_bad_request(int client);
+// CGI无法执行
+void luo_cannot_execute(int client);
 
 #endif /* _LUO_HTTPD_H_INCLUDED_ */
