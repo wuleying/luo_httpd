@@ -29,6 +29,8 @@
 #define DEFAULT_PORT				10008
 // sock默认值
 #define SOCK_DEFAULT 				-1
+// 请求连接队列的最大长度
+#define LISTEN_BACKLOG				5
 // buf最大值
 #define BUF_MAX_SIZE				1024
 // method最大值

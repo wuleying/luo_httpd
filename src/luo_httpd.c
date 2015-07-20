@@ -5,7 +5,7 @@ int luo_startup(u_short *port)
 	int httpd = 0;
 	luo_sockaddr_in addr;
 
-	httpd = socket(PF_INET, SOCK_STREAM, 0);
+	httpd = socket(PF_INET, SOCK_STREAM, IPPROTO_IP);
 
 	if (httpd == LUO_ERROR)
 	{
@@ -37,7 +37,7 @@ int luo_startup(u_short *port)
 	}
 
 	// 监听socket
-	if (listen(httpd, 5) < 0)
+	if (listen(httpd, LISTEN_BACKLOG) < 0)
 	{
 		luo_error("listen() error. in luo_httpd.c luo_startup()");
 	}
@@ -155,7 +155,7 @@ luo_accept_request(void *tclient)
 		if (cgi)
 		{
 			// 执行CGI脚本
-			//luo_execute_cgi(client, path, method, query_string);
+			luo_execute_cgi(client, path, method, query_string);
 		}
 		else
 		{
@@ -198,13 +198,131 @@ void luo_execute_file(int client, const char *path)
 }
 
 // 执行CGI脚本
-/*
- void luo_execute_cgi(int client, const char *path, const char *method,
- const char *query_string)
- {
+void luo_execute_cgi(int client, const char *path, const char *method,
+		const char *query_string)
+{
+	char buf[BUF_MAX_SIZE];
+	int cgi_input[2];
+	int cgi_output[2];
+	pid_t pid;
+	int status;
+	int i;
+	char c;
+	int char_number = 1;
+	int content_len = -1;
 
- }
- */
+	buf[0] = 'A';
+	buf[1] = '\0';
+
+	// 根据请求方式作不同处理
+	if (strcasecmp(method, "GET") == 0)
+	{
+		// GET方式
+		while ((char_number > 0) && strcmp("\n", buf))
+		{
+			char_number = luo_get_line(client, buf, sizeof(buf));
+		}
+	}
+	else
+	{
+		// POST 方式
+		char_number = luo_get_line(client, buf, sizeof(buf));
+
+		while ((char_number > 0) && strcmp("\n", buf))
+		{
+			buf[15] = '\0';
+			if (strcasecmp(buf, "Content-Length:") == 0)
+			{
+				content_len = atoi(&(buf[16]));
+			}
+		}
+
+		if (content_len == -1)
+		{
+			// todo bad request
+			return;
+		}
+	}
+
+	// 发送200状态
+	sprintf(buf, "HTTP/1.0 200 OK\r\n");
+	send(client, buf, strlen(buf), 0);
+
+	if ((pipe(cgi_output) < 0) || (pipe(cgi_input) < 0))
+	{
+		// todo cannot execute
+		return;
+	}
+
+	if ((pid = fork()) < 0)
+	{
+		// todo cannot execute
+		return;
+	}
+
+	if (pid == 0)
+	{
+		// 子进程 执行CGI脚本
+		char method_env[255];
+		char query_env[255];
+		char length_env[255];
+
+		dup2(cgi_output[1], 1);
+		dup2(cgi_input[0], 0);
+
+		close(cgi_output[0]);
+		close(cgi_input[1]);
+
+		sprintf(method_env, "REQUEST_METHOD=%s", method);
+		// 将请求方式添加到环境变量
+		putenv(method_env);
+
+		if (strcasecmp(method, "GET") == 0)
+		{
+			// GET方式
+			sprintf(query_env, "QUERY_STRING=%s", query_string);
+			// 将查询字符串添加到环境变量
+			putenv(query_env);
+		}
+		else
+		{
+			// POST方式
+			sprintf(length_env, "CONTENT_LENGTH=%d", content_len);
+			// 将内容长度添加到环境变量
+			putenv(length_env);
+		}
+
+		// 执行CGI脚本
+		execl(path, path, NULL);
+		exit(0);
+	}
+	else
+	{
+		// 父进程
+		close(cgi_output[1]);
+		close(cgi_input[0]);
+
+		if (strcasecmp(method, "POST") == 0)
+		{
+			for (i = 0; i < content_len; i++)
+			{
+				recv(client, &c, 1, 0);
+				write(cgi_input[1], &c, 1);
+			}
+		}
+
+		while (read(cgi_output[0], &c, 1) > 0)
+		{
+			send(client, &c, 1, 0);
+		}
+
+		close(cgi_output[0]);
+		close(cgi_input[1]);
+
+		// 停止目前进程的执行 直到有信号来到或子进程结束
+		waitpid(pid, &status, 0);
+	}
+}
 
 int luo_get_line(int sock, char *buf, int buf_size)
 {
