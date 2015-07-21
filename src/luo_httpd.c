@@ -190,12 +190,14 @@ void luo_execute_file(int client, const char *path)
 
 	if (file == NULL)
 	{
+		// 文件不存在
 		luo_not_found(client);
 	}
 	else
 	{
-		//
+		// 输出header
 		luo_header(client);
+		// 读取文件内容
 		luo_read_file(client, file);
 	}
 	fclose(file);
