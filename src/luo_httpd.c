@@ -24,6 +24,7 @@ int luo_startup(u_short *port)
 		luo_error("bind() error. in luo_httpd.c luo_startup()");
 	}
 
+	// 随机生成端口
 	if (*port == 0)
 	{
 		socklen_t addr_len = sizeof(addr);
@@ -191,7 +192,7 @@ void luo_execute_file(int client, const char *path)
 	}
 	else
 	{
-		luo_headers(client);
+		luo_header(client);
 		luo_cat(client, file);
 	}
 	fclose(file);
@@ -380,7 +381,7 @@ void luo_cat(int client, FILE *file)
 	}
 }
 
-void luo_headers(int client)
+void luo_header(int client)
 {
 	char buf[BUF_MAX_SIZE];
 
@@ -404,32 +405,35 @@ void luo_error(const char *error)
 // 不支持的请求方式
 void luo_unimplemented(int client)
 {
-	char buf[BUF_MAX_SIZE];
-
-	sprintf(buf, "HTTP/1.0 501 Method Not Implemented\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, SERVER_DESC);
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "Content-Type: text/html\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "<HTML><HEAD><TITLE>Method Not Implemented\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "</TITLE></HEAD>\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "<BODY><P>HTTP request method not supported.</P>\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "</BODY></HTML>\r\n");
-	send(client, buf, strlen(buf), 0);
+	luo_exception(client, 501, "Not Implemented", "501 Not Implemented.");
 }
 
 // 页面未发现
 void luo_not_found(int client)
 {
+	luo_exception(client, 404, "Not Found", "404 Not Found.");
+}
+
+// 无效的请求
+void luo_bad_request(int client)
+{
+	luo_exception(client, 400, "Bad Request", "400 Bad Request.");
+}
+
+// CGI无法执行
+void luo_cannot_execute(int client)
+{
+	luo_exception(client, 500, "Internal Server Error",
+			"500 Internal Server Error.");
+}
+
+// 输出http异常
+void luo_exception(int client, int code, const char *title,
+		const char *content)
+{
 	char buf[BUF_MAX_SIZE];
 
-	sprintf(buf, "HTTP/1.0 404 NOT FOUND\r\n");
+	sprintf(buf, "HTTP/1.0 %d %s\r\n", code, title);
 	send(client, buf, strlen(buf), 0);
 	sprintf(buf, SERVER_DESC);
 	send(client, buf, strlen(buf), 0);
@@ -437,45 +441,11 @@ void luo_not_found(int client)
 	send(client, buf, strlen(buf), 0);
 	sprintf(buf, "\r\n");
 	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "<HTML><TITLE>Not Found</TITLE>\r\n");
+	sprintf(buf, "<HTML><HEAD><TITLE>%d %s\r\n", code, title);
 	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "<BODY><P>404 Not Found</P>\r\n");
+	sprintf(buf, "</TITLE></HEAD>\r\n");
 	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "</BODY></HTML>\r\n");
-	send(client, buf, strlen(buf), 0);
-}
-
-// 无效的请求
-void luo_bad_request(int client)
-{
-	char buf[BUF_MAX_SIZE];
-
-	sprintf(buf, "HTTP/1.0 400 BAD REQUEST\r\n");
-	send(client, buf, sizeof(buf), 0);
-	sprintf(buf, "Content-type: text/html\r\n");
-	send(client, buf, sizeof(buf), 0);
-	sprintf(buf, "\r\n");
-	send(client, buf, sizeof(buf), 0);
-	sprintf(buf, "<P>Your browser sent a bad request, ");
-	send(client, buf, sizeof(buf), 0);
-	sprintf(buf, "such as a POST without a Content-Length.\r\n</P>");
-	send(client, buf, sizeof(buf), 0);
-	sprintf(buf, "</BODY></HTML>\r\n");
-	send(client, buf, strlen(buf), 0);
-}
-
-// CGI无法执行
-void luo_cannot_execute(int client)
-{
-	char buf[1024];
-
-	sprintf(buf, "HTTP/1.0 500 Internal Server Error\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "Content-type: text/html\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "\r\n");
-	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "<P>Error prohibited CGI execution.\r\n");
+	sprintf(buf, "<BODY><P>%s</P>\r\n", content);
 	send(client, buf, strlen(buf), 0);
 	sprintf(buf, "</BODY></HTML>\r\n");
 	send(client, buf, strlen(buf), 0);

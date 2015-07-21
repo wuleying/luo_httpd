@@ -67,7 +67,7 @@ int luo_get_line(int sock, char *buf, int buf_size);
 // 读取文件内容
 void luo_cat(int client, FILE *file);
 // 输出header
-void luo_headers(int client);
+void luo_header(int client);
 // 输出错误信息
 void luo_error(const char *error);
 // 不支持的请求方式
@@ -78,5 +78,8 @@ void luo_not_found(int client);
 void luo_bad_request(int client);
 // CGI无法执行
 void luo_cannot_execute(int client);
+// 输出http异常
+void luo_exception(int client, int info_code, const char *title,
+		const char *content);
 
 #endif /* _LUO_HTTPD_H_INCLUDED_ */
