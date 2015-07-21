@@ -1,6 +1,7 @@
 #include "luo_httpd.h"
 
-int luo_startup(u_short *port)
+// 初始化httpd
+int luo_httpd_init(u_short *port)
 {
 	int httpd = 0;
 	luo_sockaddr_in addr;
@@ -46,6 +47,7 @@ int luo_startup(u_short *port)
 	return httpd;
 }
 
+// 接收请求
 void *
 luo_accept_request(void *tclient)
 {
@@ -192,8 +194,9 @@ void luo_execute_file(int client, const char *path)
 	}
 	else
 	{
+		//
 		luo_header(client);
-		luo_cat(client, file);
+		luo_read_file(client, file);
 	}
 	fclose(file);
 }
@@ -330,6 +333,7 @@ void luo_execute_cgi(int client, const char *path, const char *method,
 	}
 }
 
+// 获取一行数据 并写入buf
 int luo_get_line(int sock, char *buf, int buf_size)
 {
 	int i = 0;
@@ -370,7 +374,7 @@ int luo_get_line(int sock, char *buf, int buf_size)
 }
 
 // 读取文件内容
-void luo_cat(int client, FILE *file)
+void luo_read_file(int client, FILE *file)
 {
 	char buf[BUF_MAX_SIZE];
 
@@ -381,6 +385,7 @@ void luo_cat(int client, FILE *file)
 	}
 }
 
+// 输出header
 void luo_header(int client)
 {
 	char buf[BUF_MAX_SIZE];
@@ -461,7 +466,9 @@ int main(void)
 	socklen_t client_name_len = sizeof(client_name);
 	pthread_t new_thread;
 
-	server_sock = luo_startup(&port);
+	// 初始化httpd
+	server_sock = luo_httpd_init(&port);
+
 	printf("luo_httpd running on port %d\n", port);
 
 	while (1)

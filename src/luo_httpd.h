@@ -2,20 +2,31 @@
 #define _LUO_HTTPD_H_INCLUDED_
 
 /* 头文件 */
+// 标准输入输出库 (Standard Input & Output)
 #include <stdio.h>
+// 标准库 (Standard Library)
 #include <stdlib.h>
+// 套接字接口 (Socket)
 #include <sys/socket.h>
+// 基本系统数据类型 (Types)
 #include <sys/types.h>
+// 文件状态 (unix/linux系统定义文件状态所在的伪标准头文件)
 #include <sys/stat.h>
+// 进程控制
 #include <sys/wait.h>
-// 互联网地址族头文件(Internet address family)
+// 互联网地址族 (Internet address family)
 #include <netinet/in.h>
-// 互联网操作的定义(Definitions for internet operations)
+// 互联网操作的定义 (Definitions for internet operations)
 #include <arpa/inet.h>
+// 提供对 POSIX 操作系统 API 的访问功能
 #include <unistd.h>
+// 字符分类函数 (C character classification functions)
 #include <ctype.h>
+// 字符串操作函数 (POSIX标准定义的XSI扩展头文件)
 #include <strings.h>
+// 字符串操作函数 (ISO C标准定义的头文件)
 #include <string.h>
+// 线程 (POSIX threads)
 #include <pthread.h>
 
 /* 常量/宏声明 */
@@ -41,8 +52,8 @@
 #define PATH_MAX_SIZE				512
 
 // 状态码
-#define LUO_OK 		 	 			0
-#define LUO_ERROR 					-1
+#define LUO_OK						0
+#define LUO_ERROR					-1
 
 // 判断字符x是否为空白符
 #define luo_isspace(x) 				isspace((int) (x))
@@ -53,19 +64,19 @@ typedef struct sockaddr luo_sockaddr;
 typedef struct stat luo_stat;
 
 /* 函数声明 */
-//
-int luo_startup(u_short *port);
-//
+// 初始化httpd
+int luo_httpd_init(u_short *port);
+// 接收请求
 void *luo_accept_request(void *tclient);
 // 执行普通文件
 void luo_execute_file(int client, const char *path);
 // 执行CGI脚本
 void luo_execute_cgi(int client, const char *path, const char *method,
 		const char *query_string);
-//
+// 获取一行数据 并写入buf
 int luo_get_line(int sock, char *buf, int buf_size);
 // 读取文件内容
-void luo_cat(int client, FILE *file);
+void luo_read_file(int client, FILE *file);
 // 输出header
 void luo_header(int client);
 // 输出错误信息
