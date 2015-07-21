@@ -10,7 +10,7 @@ int luo_httpd_init(u_short *port)
 
 	if (httpd == LUO_ERROR)
 	{
-		luo_error("socket() error. in luo_httpd.c luo_startup()");
+		luo_error("socket() error. in luo_httpd.c luo_httpd_init()");
 	}
 
 	memset(&addr, 0, sizeof(luo_sockaddr_in));
@@ -22,7 +22,7 @@ int luo_httpd_init(u_short *port)
 	// 绑定socket
 	if (bind(httpd, (luo_sockaddr *) &addr, sizeof(addr)) < 0)
 	{
-		luo_error("bind() error. in luo_httpd.c luo_startup()");
+		luo_error("bind() error. in luo_httpd.c luo_httpd_init()");
 	}
 
 	// 随机生成端口
@@ -32,7 +32,7 @@ int luo_httpd_init(u_short *port)
 
 		if (getsockname(httpd, (luo_sockaddr *) &addr, &addr_len) == LUO_ERROR)
 		{
-			luo_error("getsockname() error. in luo_httpd.c luo_startup()");
+			luo_error("getsockname() error. in luo_httpd.c luo_httpd_init()");
 		}
 
 		*port = ntohs(addr.sin_port);
@@ -41,7 +41,7 @@ int luo_httpd_init(u_short *port)
 	// 监听socket
 	if (listen(httpd, LISTEN_BACKLOG) < 0)
 	{
-		luo_error("listen() error. in luo_httpd.c luo_startup()");
+		luo_error("listen() error. in luo_httpd.c luo_httpd_init()");
 	}
 
 	return httpd;
@@ -80,6 +80,7 @@ luo_accept_request(void *tclient)
 	{
 		// 不支持的请求方式
 		luo_unimplemented(client);
+		close(client);
 		return NULL;
 	}
 
@@ -122,6 +123,7 @@ luo_accept_request(void *tclient)
 		}
 	}
 
+	// 拼接地址
 	sprintf(path, "%s%s", DEFAULT_ROOT_PATH, url);
 
 	// path最后一位为/时 设置默认首页
@@ -132,39 +134,34 @@ luo_accept_request(void *tclient)
 
 	if (stat(path, &st) == -1)
 	{
-		while ((char_number > 0) && strcmp("\n", buf))
-		{
-			char_number = luo_get_line(client, buf, sizeof(buf));
-		}
-
 		// 页面未发现
 		luo_not_found(client);
+		close(client);
+		return NULL;
+	}
+
+	// 档案类型为目录时 设置默认首页
+	if ((st.st_mode & S_IFMT) == S_IFDIR)
+	{
+		strcat(path, DEFAULT_HOME_PAGE);
+	}
+
+	// 检查是否对文件拥有可执行权限 user | group | other
+	if ((st.st_mode & S_IXUSR) || (st.st_mode & S_IXGRP)
+			|| (st.st_mode & S_IXOTH))
+	{
+		cgi = 1;
+	}
+
+	if (cgi)
+	{
+		// 执行CGI脚本
+		luo_execute_cgi(client, path, method, query_string);
 	}
 	else
 	{
-		// 档案类型为目录时 设置默认首页
-		if ((st.st_mode & S_IFMT) == S_IFDIR)
-		{
-			strcat(path, DEFAULT_HOME_PAGE);
-		}
-
-		// 检查是否对文件拥有可执行权限 user | group | other
-		if ((st.st_mode & S_IXUSR) || (st.st_mode & S_IXGRP)
-				|| (st.st_mode & S_IXOTH))
-		{
-			cgi = 1;
-		}
-
-		if (cgi)
-		{
-			// 执行CGI脚本
-			luo_execute_cgi(client, path, method, query_string);
-		}
-		else
-		{
-			// 执行普通文件
-			luo_execute_file(client, path);
-		}
+		// 执行普通文件
+		luo_execute_file(client, path);
 	}
 
 	close(client);
@@ -253,6 +250,8 @@ void luo_execute_cgi(int client, const char *path, const char *method,
 
 	// 发送200状态
 	sprintf(buf, "HTTP/1.0 200 OK\r\n");
+	send(client, buf, strlen(buf), 0);
+	strcpy(buf, SERVER_DESC);
 	send(client, buf, strlen(buf), 0);
 
 	if ((pipe(cgi_output) < 0) || (pipe(cgi_input) < 0))
@@ -435,8 +434,7 @@ void luo_cannot_execute(int client)
 }
 
 // 输出http异常
-void luo_exception(int client, int code, const char *title,
-		const char *content)
+void luo_exception(int client, int code, const char *title, const char *content)
 {
 	char buf[BUF_MAX_SIZE];
 
