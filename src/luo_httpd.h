@@ -77,8 +77,12 @@ void luo_execute_cgi(int client, const char *path, const char *method,
 int luo_get_line(int sock, char *buf, int buf_size);
 // 读取文件内容
 void luo_read_file(int client, FILE *file);
+// 获取文件mime类型
+char *luo_get_mime_type(const char *path);
+// 获取文件扩展名
+void luo_get_extension(const char *filename, char *extension);
 // 输出header
-void luo_header(int client);
+void luo_header(int client, const char *path);
 // 输出错误信息
 void luo_error(const char *error);
 // 不支持的请求方式

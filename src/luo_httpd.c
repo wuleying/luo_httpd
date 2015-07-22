@@ -193,7 +193,7 @@ void luo_execute_file(int client, const char *path)
 	else
 	{
 		// 输出header
-		luo_header(client);
+		luo_header(client, path);
 		// 读取文件内容
 		luo_read_file(client, file);
 	}
@@ -386,16 +386,96 @@ void luo_read_file(int client, FILE *file)
 	}
 }
 
+// 获取文件mime类型
+char *
+luo_get_mime_type(const char *path)
+{
+	char extension[16];
+
+	// 获取文件扩展名
+	luo_get_extension(path, extension);
+
+	if (!strcasecmp(extension, "html") || !strcasecmp(extension, "htm"))
+	{
+		return "text/html";
+	}
+
+	if (!strcasecmp(extension, "css"))
+	{
+		return "text/css";
+	}
+
+	if (!strcasecmp(extension, "js"))
+	{
+		return "text/javascript";
+	}
+
+	if (!strcasecmp(extension, "jpeg") || !strcasecmp(extension, "jpg"))
+	{
+		return "image/jpeg";
+	}
+
+	if (!strcasecmp(extension, "png"))
+	{
+		return "image/png";
+	}
+
+	if (!strcasecmp(extension, "gif"))
+	{
+		return "image/gif";
+	}
+
+	if (!strcasecmp(extension, "bmp"))
+	{
+		return "image/bmp";
+	}
+
+	if (!strcasecmp(extension, "text"))
+	{
+		return "text/plain";
+	}
+
+	return NULL;
+}
+
+// 获取文件扩展名
+void luo_get_extension(const char *filename, char *extension)
+{
+	int i = 0;
+	int length = strlen(filename);
+
+	while (filename[i])
+	{
+		if (filename[i] == '.')
+		{
+			break;
+		}
+		i++;
+	}
+
+	if (i < length)
+	{
+		strcpy(extension, filename + i + 1);
+	}
+	else
+	{
+		strcpy(extension, "\0");
+	}
+}
+
 // 输出header
-void luo_header(int client)
+void luo_header(int client, const char *path)
 {
 	char buf[BUF_MAX_SIZE];
+	char *mine_type;
+
+	mine_type = luo_get_mime_type(path);
 
 	strcpy(buf, "HTTP/1.0 200 OK\r\n");
 	send(client, buf, strlen(buf), 0);
 	strcpy(buf, SERVER_DESC);
 	send(client, buf, strlen(buf), 0);
-	sprintf(buf, "Content-Type: text/html\r\n");
+	sprintf(buf, "Content-Type: %s\r\n", mine_type);
 	send(client, buf, strlen(buf), 0);
 	strcpy(buf, "\r\n");
 	send(client, buf, strlen(buf), 0);
